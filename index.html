@@ -492,11 +492,9 @@
     };
 
     // Use panel layers control (more modern)
-    const panelLayers = new L.Control.PanelLayers(baseMaps, overlays, {
-      collapsibleGroups: true,
-      compact: true
-    });
-    map.addControl(panelLayers);
+const layerControl = L.control.layers(baseMaps, overlays, {
+  collapsed: false,
+}).addTo(map);
 
     // Layer event handlers
     map.on("overlayadd", (e) => {
