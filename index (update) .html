@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>KKNK Map (Demo)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <!-- Leaflet CSS and JS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-tilelayer-wmts@1.0.0/leaflet-tilelayer-wmts.js"></script>
+  <script src="https://unpkg.com/esri-leaflet@3.0.11/dist/esri-leaflet.js"></script>
+  <script src="https://unpkg.com/esri-leaflet-vector@3.0.0/dist/esri-leaflet-vector.js"></script>
+
+  <!-- Omnivore for KML -->
+  <script src="https://unpkg.com/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js"></script>
+
+  <!-- Leaflet Awesome Markers CSS & JS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet.awesome-markers@2.0.5/dist/leaflet.awesome-markers.css"
+  />
+  <script src="https://unpkg.com/leaflet.awesome-markers@2.0.5/dist/leaflet.awesome-markers.js"></script>
+
+  <!-- FontAwesome 5.15.4 for better compatibility -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+  />
+
+  <style>
+    html,
+    body,
+    #map {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    .loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255, 255, 255, 0.9);
+      padding: 10px 20px;
+      border-radius: 5px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+      display: none;
+      font-weight: bold;
+      font-size: 16px;
+      color: #333;
+    }
+
+    .station-tooltip {
+      background: rgba(255, 152, 80, 0.75); 
+      color: #fff;
+      border-radius: 3px;
+      padding: 4px 8px;
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+      pointer-events: none;
+    }
+
+    .sta-tooltip {
+      background: rgba(33, 150, 243, 0.9);  
+      color: #fff;
+      border-radius: 3px;
+      padding: 4px 8px;
+      font-size: 10px;
+      font-weight: 600;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+      pointer-events: none;
+    }
+
+    .debug-info {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 5px 10px;
+      font-size: 12px;
+      border-radius: 3px;
+      display: none;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="loading" class="loading">
+    <i class="fas fa-spinner fa-spin"></i> Loading...
+  </div>
+  <div id="debug-info" class="debug-info"></div>
+
+  <script>
+    // Initialize map
+    const map = L.map("map").setView([16.5, 102.5], 8);
+
+    // Debug mode
+    const DEBUG = true;
+    
+    function debugLog(message) {
+      if (DEBUG) {
+        console.log(message);
+        const debugDiv = document.getElementById('debug-info');
+        debugDiv.textContent = message;
+        debugDiv.style.display = 'block';
+        setTimeout(() => debugDiv.style.display = 'none', 3000);
+      }
+    }
+
+    // Loading state management
+    let loadingStates = {
+      alTrack: false,
+      stationLayout: false,
+      stationName: false,
+      showSTA: false
+    };
+
+    function updateLoadingState(layer, isLoading) {
+      // Normalize layer key
+      const layerKey = layer.toLowerCase().replace(/\s+/g, '').replace('altrack', 'alTrack');
+      
+      if (loadingStates.hasOwnProperty(layerKey)) {
+        loadingStates[layerKey] = isLoading;
+      }
+      
+      const isAnyLoading = Object.values(loadingStates).some(state => state);
+      
+      if (isAnyLoading) {
+        document.getElementById("loading").style.display = "block";
+      } else {
+        document.getElementById("loading").style.display = "none";
+      }
+      
+      if (DEBUG) {
+        console.log('Loading states:', loadingStates);
+      }
+    }
+
+    // Add multiple base map layers
+    const baseMaps = {
+      "OpenStreetMap": L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+          maxZoom: 18,
+          attribution: "&copy; OpenStreetMap contributors",
+        }
+      ),
+      "Google Satellite": L.tileLayer(
+        "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+        {
+          maxZoom: 20,
+          attribution: "&copy; Google",
+        }
+      ),
+      "Google Streets": L.tileLayer(
+        "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+        {
+          maxZoom: 20,
+          attribution: "&copy; Google",
+        }
+      ),
+      "Google Terrain": L.tileLayer(
+        "https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
+        {
+          maxZoom: 20,
+          attribution: "&copy; Google",
+        }
+      ),
+      "Google Hybrid": L.tileLayer(
+        "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+        {
+          maxZoom: 20,
+          attribution: "&copy; Google Hybrid",
+        }
+      ),
+      "Satellite": L.tileLayer(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        {
+          maxZoom: 18,
+          attribution: "&copy; Esri &mdash; Source: Esri, Maxar, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community"
+        }
+      ),
+      "Terrain": L.tileLayer(
+        "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+        {
+          maxZoom: 17,
+          attribution: "&copy; OpenTopoMap contributors"
+        }
+      ),
+      "Esri World Imagery": L.tileLayer(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_StreetMap/MapServer/tile/{z}/{y}/{x}",
+        {
+          attribution: "© Esri, Maxar, GeoEye, Earthstar Geographics",
+          maxZoom: 18
+        }
+      ),     
+      "Longdo dol_hd": L.tileLayer(
+        "https://ms.longdo.com/mapproxy/wmts/dol_hd/default/GoogleMapsCompatible/{z}/{y}/{x}.png",
+        {
+           tileSize: 256,
+           maxZoom: 20,
+           attribution: "© Longdo Map - dol_hd",
+           crossOrigin: true,
+        }
+      )
+    };
+
+    // เพิ่ม base map แรกเป็นค่าเริ่มต้น
+    baseMaps["OpenStreetMap"].addTo(map);
+
+    // Layer groups - แก้ไข: ไม่ให้ Station Name แสดงโดยอัตโนมัติ
+    const layerALTrack = L.layerGroup();
+    const layerStationLayout = L.layerGroup();
+    const layerStationName = L.layerGroup();
+    const layerShowSTA = L.layerGroup();
+
+    // Flags to prevent reloading
+    let isALTrackLoaded = false;
+    let isStationLayoutLoaded = false;
+    let isStationNameLoaded = false;
+    let isShowSTALoaded = false;
+
+    // PNG Icons
+    const icons = {
+      station: L.icon({
+        iconUrl: 'img/train (blue).png',
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -32]
+      }),
+      stop: L.icon({
+        iconUrl: 'img/train (orange).png',
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -32]
+      }),
+      origin: L.icon({
+        iconUrl: 'img/train (gray).png',
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -32]
+      }),
+      default: L.icon({
+        iconUrl: 'img/train (green).png',
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -32]
+      })
+    };
+
+    function createTimeout(layerName, timeoutMs = 30000) {
+      return setTimeout(() => {
+        const stateKey = layerName.toLowerCase().replace(/\s+/g, '').replace('track', 'Track');
+        updateLoadingState(stateKey, false);
+        debugLog(`${layerName} loading timeout`);
+        alert(`Loading ${layerName} timeout. Please check if the file is accessible.`);
+      }, timeoutMs);
+    }
+
+    // 1. Load AL Track (red line)
+    function loadALTrack() {
+      if (isALTrackLoaded) return;
+      
+      updateLoadingState('alTrack', true);
+      debugLog('Loading AL Track...');
+      
+      const timeoutId = createTimeout('AL Track', 15000);
+      
+      omnivore
+        .kml("AL_Track_KKNK.kml")
+        .on("ready", function () {
+          clearTimeout(timeoutId);
+          
+          let layerCount = 0;
+          let bounds = null;
+          
+          this.eachLayer((layer) => {
+            try {
+              if (layer.setStyle) {
+                layer.setStyle({ color: "red", weight: 1 });
+              }
+              layerALTrack.addLayer(layer);
+              layerCount++;
+              
+              if (layer.getBounds) {
+                if (bounds) {
+                  bounds.extend(layer.getBounds());
+                } else {
+                  bounds = layer.getBounds();
+                }
+              } else if (layer.getLatLng) {
+                const latlng = layer.getLatLng();
+                if (bounds) {
+                  bounds.extend(latlng);
+                } else {
+                  bounds = L.latLngBounds([latlng, latlng]);
+                }
+              }
+            } catch (error) {
+              console.error("Error processing AL Track layer:", error);
+            }
+          });
+          
+          if (bounds && bounds.isValid()) {
+            map.fitBounds(bounds);
+          } else if (layerALTrack.getLayers().length > 0) {
+            try {
+              const groupBounds = layerALTrack.getBounds();
+              if (groupBounds.isValid()) {
+                map.fitBounds(groupBounds);
+              }
+            } catch (e) {
+              console.warn('Could not get bounds from layerGroup:', e);
+            }
+          }
+          
+          isALTrackLoaded = true;
+          updateLoadingState('alTrack', false);
+          debugLog(`AL Track loaded: ${layerCount} layers`);
+        })
+        .on("error", (err) => {
+          clearTimeout(timeoutId);
+          console.error("Error loading AL Track KML:", err);
+          alert("Error loading AL Track data: " + err.message);
+          updateLoadingState('alTrack', false);
+          debugLog('AL Track loading error');
+        });
+    }
+
+    // 2. Load Station Layout (gray)
+    function loadStationLayout() {
+      if (isStationLayoutLoaded) return;
+      
+      updateLoadingState('stationLayout', true);
+      debugLog('Loading Station Layout...');
+      
+      const timeoutId = createTimeout('Station Layout', 30000);
+      
+      omnivore
+        .kml("Station.kml")
+        .on("ready", function () {
+          clearTimeout(timeoutId);
+          
+          let layerCount = 0;
+          this.eachLayer((layer) => {
+            try {
+              if (layer.setStyle) {
+                layer.setStyle({ color: "gray", weight: 1 });
+              }
+              layerStationLayout.addLayer(layer);
+              layerCount++;
+            } catch (error) {
+              console.error("Error processing Station Layout layer:", error);
+            }
+          });
+          
+          isStationLayoutLoaded = true;
+          updateLoadingState('stationLayout', false);
+          debugLog(`Station Layout loaded: ${layerCount} layers`);
+        })
+        .on("error", (err) => {
+          clearTimeout(timeoutId);
+          console.error("Error loading Station KML:", err);
+          alert("Error loading Station Layout data: " + err.message);
+          updateLoadingState('stationLayout', false);
+          debugLog('Station Layout loading error');
+        });
+    }
+
+    // 3. Load Station Name (train icons + permanent labels) - แก้ไขแล้ว
+    function loadStationName() {
+      if (isStationNameLoaded) return;
+      
+      updateLoadingState('stationName', true);
+      debugLog('Loading Station Name...');
+      
+      const timeoutId = createTimeout('Station Name', 20000);
+
+      omnivore
+        .kml("Station_Name.kml")
+        .on("ready", function () {
+          clearTimeout(timeoutId);
+          
+          let markerCount = 0;
+          let errorCount = 0;
+          
+          this.eachLayer((layer) => {
+            try {
+              let stationName = null;
+              let styleUrl = null;
+              let coords = null;
+              
+              if (layer.feature && layer.feature.properties) {
+                const props = layer.feature.properties;
+                stationName = props.name || props.Name;
+                styleUrl = props.styleUrl;
+                if (layer.feature.geometry && layer.feature.geometry.coordinates) {
+                  const geomCoords = layer.feature.geometry.coordinates;
+                  coords = [geomCoords[1], geomCoords[0]];
+                }
+              }
+              
+              if (!coords && layer.getLatLng) {
+                coords = layer.getLatLng();
+              }
+              
+              // styleUrl เช่น "#station" ให้ตัด # ออก
+              if (styleUrl && styleUrl.startsWith("#")) {
+                styleUrl = styleUrl.substring(1);
+              }
+              
+              if (coords && stationName) {
+                const icon = icons[styleUrl] || icons.default;
+                const marker = L.marker(coords, { icon: icon }).bindTooltip(
+                  stationName,
+                  {
+                    permanent: true,
+                    direction: "top",
+                    offset: [0, -10],
+                    className: "station-tooltip",
+                  }
+                );
+                layerStationName.addLayer(marker);
+                markerCount++;
+              } else {
+                errorCount++;
+              }
+            } catch (error) {
+              errorCount++;
+              console.error("Error processing station layer:", error, layer);
+            }
+          });
+          
+          isStationNameLoaded = true;
+          updateLoadingState('stationName', false);
+          debugLog(`Station Name loaded: ${markerCount} markers, ${errorCount} errors`);
+        })
+        .on("error", (err) => {
+          clearTimeout(timeoutId);
+          console.error("Error loading Station Name KML:", err);
+          alert("Error loading Station Name data: " + err.message);
+          updateLoadingState('stationName', false);
+          debugLog('Station Name loading error');
+        });
+    }
+
+    // 4. Load Show STA (blue circle markers from Sta.kml)
+    function loadShowSTA() {
+      if (isShowSTALoaded) return;
+      
+      updateLoadingState('showSTA', true);
+      debugLog('Loading Show STA...');
+
+      const timeoutId = createTimeout('Show STA', 20000);
+
+      omnivore
+        .kml("Sta.kml")
+        .on("ready", function () {
+          clearTimeout(timeoutId);
+          debugLog('Show STA KML loaded, processing...');
+
+          let markerCount = 0;
+          let errorCount = 0;
+
+          this.eachLayer((layer) => {
+            try {
+              let stationName = null;
+              let coords = null;
+
+              if (layer.feature && layer.feature.properties) {
+                const props = layer.feature.properties;
+                stationName = props.name || props.Name;
+                if (layer.feature.geometry && layer.feature.geometry.coordinates) {
+                  const geomCoords = layer.feature.geometry.coordinates;
+                  coords = [geomCoords[1], geomCoords[0]];
+                }
+              }
+
+              if (!coords && layer.getLatLng) {
+                coords = layer.getLatLng();
+              }
+
+              if (DEBUG) {
+                console.log('Processing STA layer:', {
+                  name: stationName,
+                  coords: coords,
+                  feature: layer.feature
+                });
+              }
+
+              if (coords && stationName) {
+                // ใช้ marker แบบวงกลมสีฟ้า
+                const marker = L.circleMarker(coords, {
+                  radius: 3,
+                  color: '#2196f3',
+                  fillColor: '#2196f3',
+                  fillOpacity: 0.8,
+                  weight: 2
+                })
+                .bindTooltip(
+                  `${stationName}`,
+                  {
+                    permanent: false,
+                    direction: "top",
+                    offset: [0, -10],
+                    className: "sta-tooltip",
+                  }
+                )
+                .bindPopup(`
+                  <div style="text-align: center;">
+                    <strong>Station ${stationName}</strong><br>
+                    <small>Coordinates: ${coords[0].toFixed(6)}, ${coords[1].toFixed(6)}</small>
+                  </div>
+                `);
+                layerShowSTA.addLayer(marker);
+                markerCount++;
+              } else {
+                errorCount++;
+                console.warn('Skipped STA layer - incomplete data:', {
+                  name: stationName,
+                  coords: coords,
+                  layer: layer
+                });
+              }
+            } catch (error) {
+              errorCount++;
+              console.error("Error processing STA layer:", error, layer);
+            }
+          });
+
+          if (markerCount === 0) {
+            debugLog(`No STA markers created. Errors: ${errorCount}`);
+            console.error('STA KML processing failed. Check if Sta.kml exists and is accessible.');
+            alert(
+              `Warning: No STA markers were created (${errorCount} errors). Check the console for details.`
+            );
+          }
+
+          isShowSTALoaded = true;
+          updateLoadingState('showSTA', false);
+          debugLog(`Show STA loaded: ${markerCount} markers, ${errorCount} errors`);
+        })
+        .on("error", (err) => {
+          clearTimeout(timeoutId);
+          console.error("Error loading Show STA KML:", err);
+          alert("Error loading Show STA data: " + err.message);
+          updateLoadingState('showSTA', false);
+          debugLog('Show STA loading error');
+          isShowSTALoaded = false;
+        });
+    }
+
+    // Layer control overlays
+    const overlays = {
+      "AL Track KKNK (red)": layerALTrack,
+      "Station Layout (gray)": layerStationLayout,
+      "Station Name (train icon)": layerStationName,
+      "Show STA (blue dots)": layerShowSTA,
+    };
+
+    const layerControl = L.control.layers(baseMaps, overlays, {
+      collapsed: false,
+    }).addTo(map);
+
+    map.on("overlayadd", (e) => {
+      switch (e.name) {
+        case "AL Track KKNK (red)":
+          loadALTrack();
+          layerALTrack.addTo(map);
+          break;
+        case "Station Layout (gray)":
+          loadStationLayout();
+          layerStationLayout.addTo(map);
+          break;
+        case "Station Name (train icon)":
+          loadStationName();
+          layerStationName.addTo(map);
+          break;
+        case "Show STA (blue dots)":
+          loadShowSTA();
+          layerShowSTA.addTo(map);
+          break;
+      }
+    });
+
+    map.on("overlayremove", (e) => {
+      switch (e.name) {
+        case "AL Track KKNK (red)":
+          map.removeLayer(layerALTrack);
+          break;
+        case "Station Layout (gray)":
+          map.removeLayer(layerStationLayout);
+          break;
+        case "Station Name (train icon)":
+          map.removeLayer(layerStationName);
+          break;
+        case "Show STA (blue dots)":
+          map.removeLayer(layerShowSTA);
+          break;
+      }
+    });
+
+    // เริ่มต้นโหลด AL Track และแสดงผล
+    loadALTrack();
+    layerALTrack.addTo(map);
+
+    // เพิ่ม scale control
+    L.control
+      .scale({
+        metric: true,
+        imperial: false,
+        position: "bottomleft",
+      })
+      .addTo(map);
+
+    // ย้าย zoom control ไปมุมขวาบน
+    map.removeControl(map.zoomControl);
+    L.control.zoom({
+      position: "topright",
+    }).addTo(map);
+
+    // Debug: แสดงพิกัดเมื่อคลิก
+    map.on("click", (e) => {
+      debugLog(`Clicked at: ${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`);
+    });
+
+    // Global error handler
+    window.addEventListener("error", (e) => {
+      console.error("Global error:", e.error);
+      debugLog(`Global error: ${e.error.message}`);
+    });
+
+    // ตรวจสอบการเข้าถึงไฟล์
+    function checkFileAccess() {
+      const files = ['AL_Track_KKNK.kml', 'Station.kml', 'Station_Name.kml', 'Sta.kml'];
+      files.forEach(file => {
+        fetch(file, { method: 'HEAD' })
+          .then(response => {
+            if (!response.ok) {
+              debugLog(`File ${file} not accessible (${response.status})`);
+            }
+          })
+          .catch(error => {
+            debugLog(`File ${file} check failed: ${error.message}`);
+          });
+      });
+    }
+
+    // ตรวจสอบ libraries
+    function checkLibraries() {
+      const libraries = [
+        { name: 'Leaflet', obj: 'L' },
+        { name: 'Omnivore', obj: 'omnivore' },
+        { name: 'AwesomeMarkers', obj: 'L.AwesomeMarkers' }
+      ];
+      
+      libraries.forEach(lib => {
+        const parts = lib.obj.split('.');
+        let obj = window;
+        for (const part of parts) {
+          obj = obj[part];
+          if (!obj) break;
+        }
+        
+        if (!obj) {
+          console.warn(`${lib.name} library not loaded!`);
+          debugLog(`${lib.name} library missing`);
+        } else {
+          debugLog(`${lib.name} library loaded`);
+        }
+      });
+    }
+
+    // เรียกใช้เมื่อโหลดหน้าเสร็จ
+    window.addEventListener('load', () => {
+      checkFileAccess();
+      checkLibraries();
+    });
+  </script>
+</body>
+</html>
