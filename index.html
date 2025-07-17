@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>KKNK Map (Demo)</title>
+  <title>BPNP Map (Demo)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
   <!-- Leaflet CSS and JS -->
@@ -276,7 +276,7 @@
       const timeoutId = createTimeout('AL Track', 15000);
       
       omnivore
-        .kml("AL_Track_KKNK.kml")
+        .kml("DATA/AL_Track_KKNK.kml")
         .on("ready", function () {
           clearTimeout(timeoutId);
           
@@ -346,7 +346,7 @@
       const timeoutId = createTimeout('Station Layout', 30000);
       
       omnivore
-        .kml("Station.kml")
+        .kml("DATA/Station.kml")
         .on("ready", function () {
           clearTimeout(timeoutId);
           
@@ -386,7 +386,7 @@
       const timeoutId = createTimeout('Station Name', 20000);
 
       omnivore
-        .kml("Station_Name.kml")
+        .kml("DATA/Station_Name.kml")
         .on("ready", function () {
           clearTimeout(timeoutId);
           
@@ -463,7 +463,7 @@
       const timeoutId = createTimeout('Show STA', 20000);
 
       omnivore
-        .kml("Sta.kml")
+        .kml("DATA/Sta.kml")
         .on("ready", function () {
           clearTimeout(timeoutId);
           debugLog('Show STA KML loaded, processing...');
