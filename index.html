@@ -195,22 +195,6 @@
           maxZoom: 17,
           attribution: "&copy; OpenTopoMap contributors"
         }
-      ),
-      "Esri World Imagery": L.tileLayer(
-        "https://server.arcgisonline.com/ArcGIS/rest/services/World_StreetMap/MapServer/tile/{z}/{y}/{x}",
-        {
-          attribution: "© Esri, Maxar, GeoEye, Earthstar Geographics",
-          maxZoom: 18
-        }
-      ),     
-      "Longdo dol_hd": L.tileLayer(
-        "https://ms.longdo.com/mapproxy/wmts/dol_hd/default/GoogleMapsCompatible/{z}/{y}/{x}.png",
-        {
-           tileSize: 256,
-           maxZoom: 20,
-           attribution: "© Longdo Map - dol_hd",
-           crossOrigin: true,
-        }
       )
     };
 
@@ -276,7 +260,7 @@
       const timeoutId = createTimeout('AL Track', 15000);
       
       omnivore
-        .kml("DATA/AL_Track_KKNK.kml")
+        .kml("DATA/AL_Track.kml")
         .on("ready", function () {
           clearTimeout(timeoutId);
           
