@@ -15,6 +15,10 @@
   <script src="https://unpkg.com/esri-leaflet@3.0.11/dist/esri-leaflet.js"></script>
   <script src="https://unpkg.com/esri-leaflet-vector@3.0.0/dist/esri-leaflet-vector.js"></script>
 
+  <!-- Panel Display-->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-panel-layers/dist/leaflet-panel-layers.min.css" />
+  <script src="https://unpkg.com/leaflet-panel-layers/dist/leaflet-panel-layers.min.js"></script>
+  
   <!-- Omnivore for KML -->
   <script src="https://unpkg.com/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js"></script>
 
@@ -568,7 +572,7 @@
                   color: "orange",        // เส้นสีส้ม
                   weight: 2,             // ความหนาของเส้น
                   fillColor: "yellow",   // พื้นสีเหลือง
-                  fillOpacity: 0.5       // โปร่งใส 50%
+                  fillOpacity: 0.8       // โปร่งใส 80%
                 });
               }
               layerPolygon01.addLayer(layer);
@@ -597,7 +601,7 @@
       "Station Layout (gray)": layerStationLayout,
       "Station Name (train icon)": layerStationName,
       "Show STA (blue dots)": layerShowSTA,
-      "Polygon01 (yellow/orange)": layerPolygon01,
+      "Show ROW (yellow/orange)": layerPolygon01,
     };
 
     const layerControl = L.control.layers(baseMaps, overlays, {
@@ -622,7 +626,7 @@
           loadShowSTA();
           layerShowSTA.addTo(map);
           break;
-        case "Polygon01 (yellow/orange)":
+        case "Show ROW (yellow/orange)":
           loadPolygon01();
           layerPolygon01.addTo(map);
           break;
@@ -643,12 +647,19 @@
         case "Show STA (blue dots)":
           map.removeLayer(layerShowSTA);
           break;
-        case "Polygon01 (yellow/orange)":
+        case "Show ROW (yellow/orange)":
           map.removeLayer(layerPolygon01);
           break;
       }
     });
 
+    //เพิ่ม PanelLayers
+    var panelLayers = new L.Control.PanelLayers(baseMaps, overlays, {
+      collapsibleGroups: true,
+      compact: true
+    });
+    map.addControl(panelLayers);
+    
     // เริ่มต้นโหลด AL Track และแสดงผล
     loadALTrack();
     layerALTrack.addTo(map);
@@ -662,10 +673,10 @@
       })
       .addTo(map);
 
-    // ย้าย zoom control ไปมุมขวาบน
+    // ย้าย zoom control ไปมุมซ้ายบน
     map.removeControl(map.zoomControl);
     L.control.zoom({
-      position: "topright",
+      position: "topleft",
     }).addTo(map);
 
     // Debug: แสดงพิกัดเมื่อคลิก
@@ -681,7 +692,7 @@
 
     // ตรวจสอบการเข้าถึงไฟล์
     function checkFileAccess() {
-      const files = ['AL_Track_KKNK.kml', 'Station.kml', 'Station_Name.kml', 'Sta.kml', 'Polygon01.kml'];
+      const files = ['DATA/AL_Track.kml', 'DATA/Station.kml', 'DATA/Station_Name.kml', 'DATA/Sta.kml', 'DATA/Polygon01.kml'];
       files.forEach(file => {
         fetch(file, { method: 'HEAD' })
           .then(response => {
