@@ -94,6 +94,33 @@
       display: none;
       z-index: 1000;
     }
+
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 10px 15px;
+      border-radius: 4px;
+      z-index: 1000;
+      display: none;
+      max-width: 300px;
+    }
+
+    .notification.success {
+      background: rgba(76, 175, 80, 0.9);
+      color: white;
+    }
+
+    .notification.error {
+      background: rgba(244, 67, 54, 0.9);
+      color: white;
+    }
+
+    .notification.warning {
+      background: rgba(255, 193, 7, 0.9);
+      color: black;
+    }
+    
   </style>
 </head>
 <body>
@@ -102,7 +129,8 @@
     <i class="fas fa-spinner fa-spin"></i> Loading...
   </div>
   <div id="debug-info" class="debug-info"></div>
-
+  <div id="notification" class="notification"></div>
+  
   <script>
     // Initialize map
     const map = L.map("map").setView([16.5, 102.5], 8);
