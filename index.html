@@ -701,7 +701,11 @@
       })
       .addTo(map);
     */
-    L.control.betterscale().addTo(map);
+    L.control.betterscale({
+        metric: true,
+        imperial: false,
+        position: "bottomleft",
+      }).addTo(map);
 
     
     // ย้าย zoom control ไปมุมซ้ายบน
