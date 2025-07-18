@@ -15,6 +15,10 @@
   <script src="https://unpkg.com/esri-leaflet@3.0.11/dist/esri-leaflet.js"></script>
   <script src="https://unpkg.com/esri-leaflet-vector@3.0.0/dist/esri-leaflet-vector.js"></script>
 
+  <!-- Scale bar-->
+  <link rel="stylesheet" href="L.Control.BetterScale.css" />
+  <script src="L.Control.BetterScale.js"></script>
+  
   <!-- Panel Display-->
   <link rel="stylesheet" href="https://unpkg.com/leaflet-panel-layers/dist/leaflet-panel-layers.min.css" />
   <script src="https://unpkg.com/leaflet-panel-layers/dist/leaflet-panel-layers.min.js"></script>
@@ -688,6 +692,7 @@
     layerALTrack.addTo(map);
 
     // เพิ่ม scale control
+  /*
     L.control
       .scale({
         metric: true,
@@ -695,7 +700,10 @@
         position: "bottomleft",
       })
       .addTo(map);
+    */
+    L.control.betterscale().addTo(map);
 
+    
     // ย้าย zoom control ไปมุมซ้ายบน
     map.removeControl(map.zoomControl);
     L.control.zoom({
