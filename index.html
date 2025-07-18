@@ -22,8 +22,10 @@
   <script src="L.Control.BetterScale.js"></script>
   
   <!-- Panel Display-->
+  <!--
   <link rel="stylesheet" href="https://unpkg.com/leaflet-panel-layers/dist/leaflet-panel-layers.min.css" />
   <script src="https://unpkg.com/leaflet-panel-layers/dist/leaflet-panel-layers.min.js"></script>
+  -->
   
   <!-- Omnivore for KML -->
   <script src="https://unpkg.com/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js"></script>
@@ -240,7 +242,7 @@
     // เพิ่ม base map แรกเป็นค่าเริ่มต้น
     baseMaps["OpenStreetMap"].addTo(map);
 
-    // Layer groups - แก้ไข: ไม่ให้ Station Name แสดงโดยอัตโนมัติ
+    // Layer groups 
     const layerALTrack = L.layerGroup();
     const layerStationLayout = L.layerGroup();
     const layerStationName = L.layerGroup();
@@ -542,8 +544,8 @@
                 )
                 .bindPopup(`
                   <div style="text-align: center;">
-                    <strong>Station ${stationName}</strong><br>
-                    <small>Coordinates: ${coords[0].toFixed(6)}, ${coords[1].toFixed(6)}</small>
+                    <strong>กม. ${stationName}</strong><br>
+                    <small>พิกัด: ${coords[0].toFixed(6)}, ${coords[1].toFixed(6)}</small>
                   </div>
                 `);
                 layerShowSTA.addLayer(marker);
@@ -606,7 +608,7 @@
                   color: "orange",        // เส้นสีส้ม
                   weight: 2,             // ความหนาของเส้น
                   fillColor: "yellow",   // พื้นสีเหลือง
-                  fillOpacity: 0.8       // โปร่งใส 80%
+                  fillOpacity: 0.5       // โปร่งใส 50%
                 });
               }
               layerPolygon01.addLayer(layer);
